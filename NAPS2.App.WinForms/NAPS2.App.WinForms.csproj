@@ -15,8 +15,8 @@
     <TrimMode>none</TrimMode>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
 
-    <Title>NAPS2 - Not Another PDF Scanner</Title>
-    <Product>NAPS2 - Not Another PDF Scanner</Product>
+    <Title>Feathers Capture</Title>
+    <Product>Feathers Capture</Product>
   </PropertyGroup>
 
   <Import Project="..\NAPS2.Setup\targets\CommonTargets.targets" />

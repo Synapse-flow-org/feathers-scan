@@ -15,7 +15,7 @@ public static class Paths
 #else
         var userAppData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 #if NET6_0_OR_GREATER
-        var subfolder = OperatingSystem.IsWindows() ? "NAPS2" : "naps2";
+        var subfolder = OperatingSystem.IsWindows() ? "Feathers" : "feathers";
         if (string.IsNullOrEmpty(userAppData) && OperatingSystem.IsMacOS())
         {
             // Not sure if this is necessary but older macOS (10.15) didn't seem to get the appdata path
