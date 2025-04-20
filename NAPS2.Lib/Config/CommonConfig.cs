@@ -7,6 +7,7 @@ using NAPS2.Pdf;
 using NAPS2.Ocr;
 using NAPS2.Scan;
 using NAPS2.Scan.Batch;
+using NAPS2.Folder;
 
 namespace NAPS2.Config;
 
@@ -200,7 +201,7 @@ public class CommonConfig
 
     [Common]
     public bool EnableDebugLogging { get; set; }
-    
+
     [User]
     public bool ShowPageNumbers { get; set; }
 
@@ -212,4 +213,10 @@ public class CommonConfig
 
     [User]
     public int SidebarWidth { get; set; }
+
+    [User]
+    public ImmutableList<Typage> TypageList { get; set; } = ImmutableList<Typage>.Empty;
+
+    [User]
+    public string ExportFolder { get; set; } = string.Empty;
 }

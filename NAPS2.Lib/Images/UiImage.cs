@@ -1,3 +1,5 @@
+using NAPS2.Folder;
+
 namespace NAPS2.Images;
 
 // TODO: Write tests for this class
@@ -202,4 +204,6 @@ public class UiImage : IDisposable
             return new ImageRenderState(_processedImage.GetWeakReference(), _thumbnailTransformState, _thumbnail, this);
         }
     }
+
+    public Typage? Typage;
 }

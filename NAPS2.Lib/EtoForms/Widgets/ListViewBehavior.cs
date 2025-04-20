@@ -1,5 +1,6 @@
 using Eto.Drawing;
 using Eto.Forms;
+using NAPS2.Folder;
 
 namespace NAPS2.EtoForms.Widgets;
 
@@ -13,7 +14,7 @@ public abstract class ListViewBehavior<T> where T : notnull
     public ColorScheme ColorScheme { get; }
 
     public bool MultiSelect { get; protected set; }
-        
+
     public bool ShowLabels { get; protected set; }
 
     public virtual bool ShowPageNumbers => false;
@@ -39,4 +40,7 @@ public abstract class ListViewBehavior<T> where T : notnull
     public virtual byte[] MergeCustomDragData(byte[][] dataItems) => throw new NotSupportedException();
 
     public virtual DragEffects GetCustomDragEffect(byte[] data) => throw new NotSupportedException();
+
+    public UiImageList ImageList { get; set; }
+    public FolderConfig FolderConfig { get; set; }
 }

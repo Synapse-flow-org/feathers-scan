@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Microsoft.Extensions.Logging;
 using NAPS2.EtoForms;
+using NAPS2.Folder;
 using NAPS2.ImportExport;
 using NAPS2.ImportExport.Email;
 using NAPS2.ImportExport.Email.Mapi;
@@ -59,6 +60,7 @@ public class CommonModule : Module
         builder.RegisterType<AutofacFormFactory>().As<IFormFactory>();
         builder.RegisterType<AutofacOperationFactory>().As<IOperationFactory>();
         builder.RegisterType<UiImageList>().AsSelf().SingleInstance();
+        builder.RegisterType<FolderConfig>().AsSelf().SingleInstance();
         builder.RegisterType<StillImage>().AsSelf().SingleInstance();
         builder.RegisterType<AutoSaver>().AsSelf().SingleInstance();
         // TODO: Use PdfiumWorkerCoordinator?

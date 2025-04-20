@@ -121,7 +121,7 @@
     <value>About</value>
   </data>
   <data name="CopyrightFormat" xml:space="preserve">
-    <value>Copyright {0} NAPS2 Contributors</value>
+    <value>Copyright {0} Feathers Capture Contributors</value>
   </data>
   <data name="IconsFrom" xml:space="preserve">
     <value>Icons from:</value>
@@ -388,7 +388,7 @@
     <value>TWAIN Driver</value>
   </data>
   <data name="EsclDriver" xml:space="preserve">
-    <value>ESCL Driver</value>
+    <value>Imprimante MFP</value>
   </data>
   <data name="EsclNetworkDriver" xml:space="preserve">
     <value>ESCL Network Driver</value>
@@ -466,13 +466,13 @@
     <value>Run in Background</value>
   </data>
   <data name="Naps2" xml:space="preserve">
-    <value>NAPS2</value>
+    <value>Feathers Capture</value>
   </data>
   <data name="Naps2TitleFormat" xml:space="preserve">
-    <value>NAPS2 - {0}</value>
+    <value>Feathers Capture {0}</value>
   </data>
   <data name="Naps2FullName" xml:space="preserve">
-    <value>Not Another PDF Scanner</value>
+    <value>-</value>
   </data>
   <data name="OcrSetupFormTitle" xml:space="preserve">
     <value>OCR Setup</value>
@@ -847,7 +847,7 @@
     <value>Time between scans (seconds):</value>
   </data>
   <data name="LoadIn" xml:space="preserve">
-    <value>Load images into NAPS2</value>
+    <value>Load images into Feathers Capture</value>
   </data>
   <data name="SaveToSingleFile" xml:space="preserve">
     <value>Save to a single file</value>
@@ -974,5 +974,20 @@
   </data>
   <data name="Shortcut" xml:space="preserve">
     <value>Shortcut</value>
+  </data>
+  <data name="Typage" xml:space="preserve">
+    <value>Typage</value>
+  </data>
+  <data name="NewFolder" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="UpdateFolder" xml:space="preserve">
+    <value>Update Folder</value>
+  </data>
+  <data name="FolderNumError" xml:space="preserve">
+    <value>Enter Folder Num</value>
+  </data>
+  <data name="CreateFolder" xml:space="preserve">
+    <value>Create Folder</value>
   </data>
 </root>

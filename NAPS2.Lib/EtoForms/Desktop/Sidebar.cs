@@ -1,8 +1,10 @@
 using System.Globalization;
+using Eto.Drawing;
 using Eto.Forms;
 using NAPS2.EtoForms.Layout;
 using NAPS2.EtoForms.Ui;
 using NAPS2.EtoForms.Widgets;
+using NAPS2.Folder;
 using NAPS2.Scan;
 using NAPS2.Scan.Internal;
 
@@ -20,18 +22,26 @@ public class Sidebar
 
     private readonly LayoutVisibility _sidebarVis = new(true);
     private readonly LayoutVisibility _onboardingVis = new(false);
+    private readonly LayoutVisibility _forlderConfigVis = new(false);
     private readonly LayoutVisibility _predefinedVis = new(true);
     private readonly DropDownWidget<ScanProfile> _profile = new();
     private readonly EnumDropDownWidget<ScanSource> _paperSource = new();
     private readonly EnumDropDownWidget<ScanBitDepth> _bitDepth = new();
 
+    private readonly TextBox _folderNum = new() { ReadOnly = true, BackgroundColor = Color.FromRgb(0xffffff) };
+    private readonly TextBox _folderFirstName = new() { ReadOnly = true, BackgroundColor = Color.FromRgb(0xffffff) };
+    private readonly TextBox _folderLastName = new() { ReadOnly = true, BackgroundColor = Color.FromRgb(0xffffff) };
+    private readonly TextBox _folderCIN = new() { ReadOnly = true, BackgroundColor = Color.FromRgb(0xffffff) };
+
     private DeviceSelectorWidget? _deviceSelectorWidget;
+    private LayoutColumn _folderConfigLayout;
     private PageSizeDropDownWidget? _pageSize;
     private ResolutionDropDownWidget? _resolution;
+    private FolderConfig _folderConfig;
 
     public Sidebar(IScanPerformer scanPerformer, DeviceCapsCache deviceCapsCache, IProfileManager profileManager,
         Naps2Config config, IIconProvider iconProvider, IFormFactory formFactory,
-        IDesktopScanController desktopScanController)
+        IDesktopScanController desktopScanController, FolderConfig folderConfig)
     {
         _scanPerformer = scanPerformer;
         _deviceCapsCache = deviceCapsCache;
@@ -43,8 +53,20 @@ public class Sidebar
         _profile.Format = x => x.DisplayName;
         _profileManager.ProfilesUpdated += (_, _) => UpdateProfilesDropdown();
         UpdateProfilesDropdown();
+        _folderConfig = folderConfig;
+        _folderConfig.ConfigUpdated += (_, _) => UpdateFolderConfig(); ;
+
+        _folderNum.Text = folderConfig.Num ?? "";
+        _folderFirstName.Text = folderConfig.FirstName ?? "";
+        _folderLastName.Text = folderConfig.LastName ?? "";
+        _folderCIN.Text = folderConfig.CIN ?? "";
 
         EditProfileCommand = new ActionCommand(EditProfile)
+        {
+            ToolTip = UiStrings.Edit,
+            IconName = "pencil_small"
+        };
+        EditFolderCommand = new ActionCommand(EditFolderconfig)
         {
             ToolTip = UiStrings.Edit,
             IconName = "pencil_small"
@@ -60,16 +82,63 @@ public class Sidebar
             Text = UiStrings.Scan,
             IconName = "control_play_blue_small"
         };
+
+        _folderConfigLayout =
+            L.Column(
+                L.GroupBox("",
+                    L.Column(
+                        L.Row(
+                            C.Label("Dossier :").Scale().AlignTrailing(),
+                            C.Filler(),
+                            C.Button(EditFolderCommand, ButtonImagePosition.Overlay).Height(EtoPlatform.Current.IsMac ? 20 : null).Width(30)
+                            ),
+                        C.Label("Numéro"),
+                        _folderNum,
+                        C.Label("Nom"),
+                        _folderFirstName,
+                        C.Label("Prénom"),
+                        _folderLastName,
+                        C.Label("CIN"),
+                        _folderCIN,
+                        C.Spacer()
+                    ))
+            );
     }
 
     private ActionCommand NewProfileCommand { get; }
     private ActionCommand EditProfileCommand { get; }
+    private ActionCommand EditFolderCommand { get; }
     private ActionCommand ScanCommand { get; }
 
     private void UpdateProfilesDropdown()
     {
         _profile.Items = _profileManager.Profiles;
         _onboardingVis.IsVisible = _profileManager.Profiles.Count == 0;
+    }
+
+    private void UpdateFolderConfig()
+    {
+        _folderNum.Text = _folderConfig.Num ?? "";
+        _folderFirstName.Text = _folderConfig.FirstName ?? "";
+        _folderLastName.Text = _folderConfig.LastName ?? "";
+        _folderCIN.Text = _folderConfig.CIN ?? "";
+        _forlderConfigVis.IsVisible = true;
+    }
+
+    private void EditFolderconfig()
+    {
+        var createFolderForm = _formFactory.Create<CreateFolderForm>();
+        createFolderForm.ShowModal();
+        if (!createFolderForm.Result)
+        {
+            return;
+        }
+
+        _folderConfig.Num = createFolderForm?.FolderConfig?.Num;
+        _folderConfig.FirstName = createFolderForm?.FolderConfig?.FirstName;
+        _folderConfig.LastName = createFolderForm?.FolderConfig?.LastName;
+        _folderConfig.CIN = createFolderForm?.FolderConfig?.CIN;
+        _folderConfig.FolderConfigUpdate();
     }
 
     private void EditProfile()
@@ -84,7 +153,7 @@ public class Sidebar
             {
                 _profile.SelectedItem = fedit.ScanProfile;
                 _profileManager.Mutate(new ListMutation<ScanProfile>.ReplaceWith(fedit.ScanProfile),
-                    ListSelection.Of(originalProfile));
+                  ListSelection.Of(originalProfile));
             }
         }
     }
@@ -146,7 +215,9 @@ public class Sidebar
         UpdateUiForProfile();
 
         return L.Column(
-            C.Filler().NaturalWidth(100),
+            C.Spacer(),
+            C.Spacer(),
+           _folderConfigLayout.Visible(_forlderConfigVis),
             L.Column(
                 C.Button(NewProfileCommand, ButtonImagePosition.Left).Height(30).AlignCenter()
             ).Visible(_onboardingVis),

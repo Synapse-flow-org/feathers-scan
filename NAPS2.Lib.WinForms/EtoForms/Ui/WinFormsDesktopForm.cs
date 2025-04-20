@@ -8,6 +8,7 @@ using NAPS2.EtoForms.Layout;
 using NAPS2.EtoForms.Notifications;
 using NAPS2.EtoForms.Widgets;
 using NAPS2.EtoForms.WinForms;
+using NAPS2.Folder;
 using NAPS2.Scan;
 using NAPS2.WinForms;
 using WF = System.Windows.Forms;
@@ -31,6 +32,7 @@ public class WinFormsDesktopForm : DesktopForm
         ColorScheme colorScheme,
         IProfileManager profileManager,
         UiImageList imageList,
+        FolderConfig folderConfig,
         ThumbnailController thumbnailController,
         UiThumbnailProvider thumbnailProvider,
         DesktopController desktopController,
@@ -44,7 +46,7 @@ public class WinFormsDesktopForm : DesktopForm
         IIconProvider iconProvider)
         : base(config, keyboardShortcuts, notificationManager, cultureHelper, colorScheme, profileManager, imageList,
             thumbnailController, thumbnailProvider, desktopController, desktopScanController, imageListActions,
-            imageListViewBehavior, desktopFormProvider, desktopSubFormController, commands, sidebar, iconProvider)
+            imageListViewBehavior, desktopFormProvider, desktopSubFormController, commands, sidebar, iconProvider, folderConfig)
     {
         _form = this.ToNative();
         _form.FormClosing += OnFormClosing;
@@ -126,7 +128,7 @@ public class WinFormsDesktopForm : DesktopForm
         );
     }
 
-    private WF.ListView NativeListView => ((WinFormsListView<UiImage>) _listView).NativeControl;
+    private WF.ListView NativeListView => ((WinFormsListView<UiImage>)_listView).NativeControl;
 
     protected override void SetCulture(string cultureId)
     {
@@ -143,13 +145,13 @@ public class WinFormsDesktopForm : DesktopForm
     protected override void ConfigureToolbars()
     {
         _container = new WF.ToolStripContainer();
-        _mainToolStrip = ((ToolBarHandler) ToolBar.Handler).Control;
+        _mainToolStrip = ((ToolBarHandler)ToolBar.Handler).Control;
         _profilesToolStrip = new WF.ToolStrip();
 
         _mainToolStrip.ShowItemToolTips = false;
         _mainToolStrip.TabStop = true;
         EtoPlatform.Current.AttachDpiDependency(this,
-            scale => _mainToolStrip.ImageScalingSize = new Size((int) (32 * scale), (int) (32 * scale)));
+            scale => _mainToolStrip.ImageScalingSize = new Size((int)(32 * scale), (int)(32 * scale)));
         _container.TopToolStripPanel.Controls.Add(_mainToolStrip);
         _mainToolStrip.ParentChanged += (_, _) =>
         {
@@ -161,7 +163,7 @@ public class WinFormsDesktopForm : DesktopForm
         _profilesToolStrip.TabStop = true;
         _profilesToolStrip.Location = new Point(0, 1000);
         EtoPlatform.Current.AttachDpiDependency(this,
-            scale => _profilesToolStrip.ImageScalingSize = new Size((int) (16 * scale), (int) (16 * scale)));
+            scale => _profilesToolStrip.ImageScalingSize = new Size((int)(16 * scale), (int)(16 * scale)));
         PlaceProfilesToolbar();
         _profilesToolStrip.ParentChanged += (_, _) => LayoutController.Invalidate();
 
@@ -204,7 +206,7 @@ public class WinFormsDesktopForm : DesktopForm
             };
             EtoPlatform.Current.AttachDpiDependency(this,
                 scale => item.Image = _iconProvider.GetIcon("control_play_blue_small", scale).ToSD());
-            item.Click += (_, _) => _desktopScanController.ScanWithProfile((ScanProfile) item.Tag!);
+            item.Click += (_, _) => _desktopScanController.ScanWithProfile((ScanProfile)item.Tag!);
             toolbarItems.Add(item);
         }
         for (int i = 0; i < profiles.Count; i++)
@@ -237,10 +239,10 @@ public class WinFormsDesktopForm : DesktopForm
     {
         var pen = new Pen(_colorScheme.SeparatorColor.ToSD());
 
-        var splitter = ((LayoutLeftPanel) LayoutController.Content!).Splitter;
-        var panel1 = (WF.Panel) splitter.Panel1.ToNative();
-        var panel2 = (WF.Panel) splitter.Panel2.ToNative();
-        var split = (WF.SplitContainer) splitter.ToNative();
+        var splitter = ((LayoutLeftPanel)LayoutController.Content!).Splitter;
+        var panel1 = (WF.Panel)splitter.Panel1.ToNative();
+        var panel2 = (WF.Panel)splitter.Panel2.ToNative();
+        var split = (WF.SplitContainer)splitter.ToNative();
         // Draw horizontal lines at the top of the content (below the toolbar) and a vertical line at the sidebar split point
         // TODO: Improve this for when the toolbars are in non-standard positions (i.e. not the top)
         // TODO: Consider if it's worth widening the border for high-dpi
@@ -269,8 +271,8 @@ public class WinFormsDesktopForm : DesktopForm
         int hSpacing = thumbnailSize + padding;
         int vSpacing = thumbnailSize + padding * 2;
         WinFormsHacks.SetListSpacing(NativeListView,
-            (int) Math.Round(hSpacing * scale),
-            (int) Math.Round(vSpacing * scale));
+            (int)Math.Round(hSpacing * scale),
+            (int)Math.Round(vSpacing * scale));
     }
 
     protected override void CreateToolbarButton(Command command)
@@ -290,7 +292,7 @@ public class WinFormsDesktopForm : DesktopForm
         {
             TextImageRelation = WF.TextImageRelation.ImageAboveText
         };
-        EtoPlatform.Current.AttachDpiDependency(this, scale => item.DropDownButtonWidth = (int) (scale * 15));
+        EtoPlatform.Current.AttachDpiDependency(this, scale => item.DropDownButtonWidth = (int)(scale * 15));
         ApplyCommand(item, command);
         _mainToolStrip.Items.Add(item);
         menu.Handle(subItems => SetUpMenu(item, subItems));
@@ -346,8 +348,8 @@ public class WinFormsDesktopForm : DesktopForm
         item.AccessibleName = string.Join(" ", command1.ToolBarText, command2.ToolBarText);
         EtoPlatform.Current.AttachDpiDependency(this, scale =>
         {
-            item.FirstImage = ((ActionCommand) command1).GetIconImage(scale).ToSD();
-            item.SecondImage = ((ActionCommand) command2).GetIconImage(scale).ToSD();
+            item.FirstImage = ((ActionCommand)command1).GetIconImage(scale).ToSD();
+            item.SecondImage = ((ActionCommand)command2).GetIconImage(scale).ToSD();
         });
         command1.EnabledChanged += (_, _) => item.Enabled = command1.Enabled;
         item.FirstClick += (_, _) => command1.Execute();
@@ -359,7 +361,7 @@ public class WinFormsDesktopForm : DesktopForm
     {
         void SetItemText() => item.Text = item is WF.ToolStripMenuItem ? command.MenuText : command.ToolBarText;
         EtoPlatform.Current.AttachDpiDependency(this,
-            scale => item.Image = ((ActionCommand) command).GetIconImage(scale).ToSD());
+            scale => item.Image = ((ActionCommand)command).GetIconImage(scale).ToSD());
         SetItemText();
         if (command is ActionCommand actionCommand)
         {

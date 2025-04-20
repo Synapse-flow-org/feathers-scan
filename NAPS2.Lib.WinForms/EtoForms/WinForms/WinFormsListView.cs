@@ -3,8 +3,11 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Eto.WinForms;
 using Eto.WinForms.Forms.Menu;
+using Microsoft.Extensions.DependencyInjection;
+using NAPS2.EtoForms.Ui;
 using NAPS2.EtoForms.Widgets;
 using NAPS2.WinForms;
+using static Eto.WinForms.Forms.FormHandler;
 using ContextMenu = Eto.Forms.ContextMenu;
 
 namespace NAPS2.EtoForms.WinForms;
@@ -18,7 +21,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
     private SolidBrush PageNumberOutlineBrush => new(_behavior.ColorScheme.HighlightBorderColor.ToSD());
     private SolidBrush PageNumberSelectionBrush => new(_behavior.ColorScheme.HighlightBackgroundColor.ToSD());
     private static readonly StringFormat PageNumberLabelFormat = new()
-        { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
+    { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
 
     private readonly ListView _view;
     private readonly Eto.Forms.Control _viewEtoControl;
@@ -72,6 +75,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
             : !_behavior.Checkboxes
                 ? new WinFormsImageList<T>.Native(this, _behavior)
                 : new WinFormsImageList<T>.Stub(this, _behavior);
+
         if (UseCustomRendering)
         {
             _view.OwnerDraw = true;
@@ -91,26 +95,33 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
     private void CustomRenderItem(object? sender, DrawListViewItemEventArgs e)
     {
         var image = ImageList.Get(e.Item);
-        int imageSizeW = (int) Math.Round(_imageSize.Width * _dpiScale);
-        int imageSizeH = (int) Math.Round(_imageSize.Height * _dpiScale);
+        var uiImage = _behavior.ImageList.Images.ElementAtOrDefault(e.ItemIndex);
+        var folderConfig = _behavior.FolderConfig;
+
+        int imageSizeW = (int)Math.Round(_imageSize.Width * _dpiScale);
+        int imageSizeH = (int)Math.Round(_imageSize.Height * _dpiScale);
         if (_behavior.ShowPageNumbers)
         {
-            int tp = (int) Math.Round(PageNumberTextPadding * _dpiScale);
-            int sp = (int) Math.Round(PageNumberSelectionPadding * _dpiScale);
+            int tp = (int)Math.Round(PageNumberTextPadding * _dpiScale);
+            int sp = (int)Math.Round(PageNumberSelectionPadding * _dpiScale);
 
             // When page numbers are shown, we use a completely different drawing path, as we need to offset the image
             // to have room for the page numbers, and the selection rectangle has a completely different style to
             // encompass the page numbers too.
-            string label = $"{e.ItemIndex + 1} / {_view.Items.Count}";
-            SizeF textSize = TextRenderer.MeasureText(label, _view.Font);
-            int textOffset = (int) (textSize.Height + tp);
+            var typage = !string.IsNullOrEmpty(folderConfig.Num) && !string.IsNullOrEmpty(uiImage?.Typage?.Code) ?
+                $"\n[{folderConfig.Num} / {uiImage.Typage.Code}]" : "";
 
-            float scaleHeight = (float) (imageSizeH - textOffset) / image.Height;
-            float scaleWidth = (float) imageSizeW / image.Width;
+            string label = $"{e.ItemIndex + 1} / {_view.Items.Count}{typage}";
+            SizeF textSize = TextRenderer.MeasureText(label, _view.Font);
+
+            int textOffset = (int)(textSize.Height + tp);
+
+            float scaleHeight = (float)(imageSizeH - textOffset) / image.Height;
+            float scaleWidth = (float)imageSizeW / image.Width;
 
             float scale = Math.Min(scaleWidth, scaleHeight);
-            int height = (int) Math.Round(image.Height * scale);
-            int width = (int) Math.Round(image.Width * scale);
+            int height = (int)Math.Round(image.Height * scale);
+            int width = (int)Math.Round(image.Width * scale);
 
             var x = e.Bounds.Left + (e.Bounds.Width - width) / 2;
             var y = e.Bounds.Top + (e.Bounds.Height - height - textOffset) / 2;
@@ -161,12 +172,12 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
             if (image.Width > image.Height)
             {
                 width = imageSizeW;
-                height = (int) Math.Round(width * (image.Height / (double) image.Width));
+                height = (int)Math.Round(width * (image.Height / (double)image.Width));
             }
             else
             {
                 height = imageSizeH;
-                width = (int) Math.Round(height * (image.Width / (double) image.Height));
+                width = (int)Math.Round(height * (image.Width / (double)image.Height));
             }
             var x = e.Bounds.Left + (e.Bounds.Width - width) / 2;
             var y = e.Bounds.Top + (e.Bounds.Height - height) / 2;
@@ -194,8 +205,8 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
             _imageSize = value;
             if (_view.LargeImageList != null)
             {
-                int w = (int) Math.Round(_imageSize.Width * _dpiScale);
-                int h = (int) Math.Round(_imageSize.Height * _dpiScale);
+                int w = (int)Math.Round(_imageSize.Width * _dpiScale);
+                int h = (int)Math.Round(_imageSize.Height * _dpiScale);
                 WinFormsHacks.SetImageSize(_view.LargeImageList!, new Size(w, h));
             }
         }
@@ -271,11 +282,11 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
         {
             if (_behavior.Checkboxes)
             {
-                Items[i].Checked = Selection.Contains((T) Items[i].Tag!);
+                Items[i].Checked = Selection.Contains((T)Items[i].Tag!);
             }
             else
             {
-                Items[i].Selected = Selection.Contains((T) Items[i].Tag!);
+                Items[i].Selected = Selection.Contains((T)Items[i].Tag!);
             }
         }
     }
@@ -290,7 +301,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
         {
             // TODO: Not sure why but this gets glitchy unless we reset the items too
             Invoker.Current.InvokeDispatch(() =>
-                SetItems(_view.Items.Cast<ListViewItem>().Select(x => (T) x.Tag!).ToList()));
+                SetItems(_view.Items.Cast<ListViewItem>().Select(x => (T)x.Tag!).ToList()));
             return;
         }
         _refreshing = true;
@@ -300,7 +311,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
         var images = new List<Image>();
         foreach (ListViewItem listViewItem in Items)
         {
-            var item = (T) listViewItem.Tag!;
+            var item = (T)listViewItem.Tag!;
             images.Add(ImageList.PartialAppend(item));
         }
         ImageList.FinishPartialAppends(images);
@@ -320,7 +331,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
 
         // TODO: We might want to make the differ even smarter. e.g. maybe it can generate an arbitrary order of operations that minimizes update cost
         // example: clear then append 1 instead of delete all but 1
-        var originalItemsList = Items.OfType<ListViewItem>().Select(x => (T) x.Tag!).ToList();
+        var originalItemsList = Items.OfType<ListViewItem>().Select(x => (T)x.Tag!).ToList();
         var originalItemsSet = new HashSet<T>(originalItemsList);
         if (!diffs.AppendOperations.Any() && !diffs.ReplaceOperations.Any() &&
             diffs.TrimOperations.Any(x => x.Count == Items.Count))
@@ -356,7 +367,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
             }
         }
         SetSelectedItems();
-        var newItemsList = Items.OfType<ListViewItem>().Select(x => (T) x.Tag!).ToList();
+        var newItemsList = Items.OfType<ListViewItem>().Select(x => (T)x.Tag!).ToList();
         var newItemsSet = new HashSet<T>(newItemsList);
         if (originalItemsSet.SetEquals(newItemsSet) && !originalItemsList.SequenceEqual(newItemsList))
         {
@@ -394,6 +405,8 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
         }
     }
 
+    public object ScanningContext { get; private set; }
+
     private string GetLabel(T item) => _behavior.ShowLabels ? _behavior.GetLabel(item) : "";
 
     private void OnSelectedIndexChanged(object? sender, EventArgs e)
@@ -404,7 +417,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
             var items = _behavior.Checkboxes
                 ? _view.CheckedItems.Cast<ListViewItem>()
                 : _view.SelectedItems.Cast<ListViewItem>();
-            Selection = ListSelection.From(items.Select(x => (T) x.Tag!));
+            Selection = ListSelection.From(items.Select(x => (T)x.Tag!));
             _refreshing = false;
         }
     }
@@ -451,7 +464,7 @@ public class WinFormsListView<T> : IListView<T> where T : notnull
             {
                 if (data.Contains("FileDrop"))
                 {
-                    var filePaths = (string[]) e.Data!.GetData(DataFormats.FileDrop)!;
+                    var filePaths = (string[])e.Data!.GetData(DataFormats.FileDrop)!;
                     Drop?.Invoke(this, new DropEventArgs(index, filePaths));
                 }
             }

@@ -1,4 +1,5 @@
 using NAPS2.EtoForms.Desktop;
+using NAPS2.Folder;
 
 namespace NAPS2.EtoForms.Ui;
 
@@ -13,11 +14,11 @@ public class DesktopCommands
     private readonly IIconProvider _iconProvider;
     private readonly Naps2Config _config;
     private readonly DesktopFormProvider _desktopFormProvider;
-
+    private readonly FolderConfig _folderConfig;
     public DesktopCommands(DesktopController desktopController, DesktopScanController desktopScanController,
         IDesktopSubFormController desktopSubFormController, UiImageList imageList, ImageListActions imageListActions,
         ThumbnailController thumbnailController, IIconProvider iconProvider, Naps2Config config,
-        DesktopFormProvider desktopFormProvider)
+        DesktopFormProvider desktopFormProvider, FolderConfig folderConfig)
     {
         _desktopController = desktopController;
         _desktopScanController = desktopScanController;
@@ -28,13 +29,14 @@ public class DesktopCommands
         _iconProvider = iconProvider;
         _config = config;
         _desktopFormProvider = desktopFormProvider;
+        _folderConfig = folderConfig;
 
         var hiddenButtons = config.Get(c => c.HiddenButtons);
 
         Scan = new ActionCommand(desktopScanController.ScanDefault)
         {
             Text = UiStrings.Scan,
-            IconName = "control_play_blue"
+            IconName = "scaner"
         };
         NewProfile = new ActionCommand(desktopScanController.ScanWithNewProfile)
         {
@@ -54,17 +56,32 @@ public class DesktopCommands
         Profiles = new ActionCommand(desktopSubFormController.ShowProfilesForm)
         {
             Text = UiStrings.Profiles,
-            IconName = "blueprints"
+            IconName = "folders"
         };
         Ocr = new ActionCommand(desktopSubFormController.ShowOcrForm)
         {
             Text = UiStrings.Ocr,
             IconName = "text"
         };
+        CreateFolder = new ActionCommand(desktopSubFormController.ShowCreateFolderForm)
+        {
+            Text = UiStrings.CreateFolder,
+            IconName = "add_folder"
+        };
+        Logo = new ActionCommand(desktopSubFormController.ShowBrandForm)
+        {
+            Text = "Synapse Flow",
+            IconName = "logo"
+        };
         Import = new ActionCommand(desktopController.Import)
         {
             Text = UiStrings.Import,
-            IconName = "folder_picture"
+            IconName = "folder_import"
+        };
+        Export = new ActionCommand(desktopController.Export)
+        {
+            Text = "Exporter",
+            IconName = "export"
         };
         SaveAll = new ActionCommand(imageListActions.SaveAllAsPdfOrImages)
         {
@@ -140,6 +157,16 @@ public class DesktopCommands
         {
             Text = UiStrings.View,
             IconName = "zoom_small"
+        };
+        Typage = new ActionCommand(desktopSubFormController.ShowTypageForm)
+        {
+            Text = UiStrings.Typage,
+            IconName = "typage_box"
+        };
+        Psuite = new ActionCommand(desktopSubFormController.SetAsPsuite)
+        {
+            Text = "PSuite",
+            IconName = "typage_box"
         };
         Crop = new ActionCommand(desktopSubFormController.ShowCropForm)
         {
@@ -326,6 +353,13 @@ public class DesktopCommands
         };
     }
 
+    public void UpdateFolderTitle()
+    {
+        var isFolderNumNotSet = string.IsNullOrEmpty(_folderConfig.Num);
+        CreateFolder.Text = isFolderNumNotSet ? UiStrings.CreateFolder : UiStrings.UpdateFolder;
+        CreateFolder.IconName = isFolderNumNotSet ? "add_folder" : "update_folder";
+    }
+
     public DesktopCommands WithSelection(Func<ListSelection<UiImage>> selectionFunc)
     {
         return new DesktopCommands(
@@ -337,7 +371,8 @@ public class DesktopCommands
             _thumbnailController,
             _iconProvider,
             _config,
-            _desktopFormProvider);
+            _desktopFormProvider,
+            _folderConfig);
     }
 
     public ImageListActions ImageListActions => _imageListActions;
@@ -349,6 +384,9 @@ public class DesktopCommands
     public ActionCommand Profiles { get; set; }
     public ActionCommand Ocr { get; set; }
     public ActionCommand Import { get; set; }
+    public ActionCommand Export { get; set; }
+    public ActionCommand CreateFolder { get; set; }
+    public ActionCommand Logo { get; set; }
     public ActionCommand SaveAll { get; set; }
     public ActionCommand SaveSelected { get; set; }
     public ActionCommand SavePdf { get; set; }
@@ -366,6 +404,8 @@ public class DesktopCommands
     public ActionCommand Print { get; set; }
     public ActionCommand ImageMenu { get; set; }
     public ActionCommand ViewImage { get; set; }
+    public ActionCommand Typage { get; set; }
+    public ActionCommand Psuite { get; set; }
     public ActionCommand Crop { get; set; }
     public ActionCommand BrightCont { get; set; }
     public ActionCommand HueSat { get; set; }

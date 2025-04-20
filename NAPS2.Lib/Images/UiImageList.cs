@@ -95,6 +95,11 @@ public class UiImageList
         MutateInternal(mutation, selectionToMutate, isPassiveInteraction, updateUndoStack, disposeDeleted);
     }
 
+    public void UpdateTypage()
+    {
+        SelectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public async Task MutateAsync(ListMutation<UiImage> mutation, ListSelection<UiImage>? selectionToMutate = null,
         bool isPassiveInteraction = false, bool updateUndoStack = true, bool disposeDeleted = true)
     {

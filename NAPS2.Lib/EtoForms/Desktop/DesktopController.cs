@@ -1,11 +1,15 @@
+using System.Diagnostics;
 using System.Threading;
 using Eto.Drawing;
 using Eto.Forms;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using NAPS2.EtoForms.Notifications;
+using NAPS2.Folder;
+using NAPS2.Images;
 using NAPS2.ImportExport;
 using NAPS2.ImportExport.Images;
+using NAPS2.Logging;
 using NAPS2.Platform.Windows;
 using NAPS2.Recovery;
 using NAPS2.Remoting;
@@ -38,6 +42,10 @@ public class DesktopController
     private readonly ProcessCoordinator _processCoordinator;
     private readonly RecoveryManager _recoveryManager;
     private readonly ImageTransfer _imageTransfer = new();
+    private readonly FolderConfig _folderConfig;
+    private readonly ErrorOutput _errorOutput;
+    private readonly ImageContext _imageContext;
+    private readonly CancellationTokenSource _cts = new();
 
     private bool _closed;
     private bool _preInitialized;
@@ -53,7 +61,8 @@ public class DesktopController
         DialogHelper dialogHelper,
         DesktopImagesController desktopImagesController, IDesktopScanController desktopScanController,
         DesktopFormProvider desktopFormProvider, IScannedImagePrinter scannedImagePrinter,
-        ISharedDeviceManager sharedDeviceManager, ProcessCoordinator processCoordinator, RecoveryManager recoveryManager)
+        ISharedDeviceManager sharedDeviceManager, ProcessCoordinator processCoordinator, RecoveryManager recoveryManager,
+        FolderConfig folderConfig, ErrorOutput errorOutput, ImageContext imageContext)
     {
         _scanningContext = scanningContext;
         _imageList = imageList;
@@ -75,6 +84,9 @@ public class DesktopController
         _sharedDeviceManager = sharedDeviceManager;
         _processCoordinator = processCoordinator;
         _recoveryManager = recoveryManager;
+        _folderConfig = folderConfig;
+        _errorOutput = errorOutput;
+        _imageContext = imageContext;
     }
 
     public bool SkipRecoveryCleanup { get; set; }
@@ -372,7 +384,7 @@ public class DesktopController
         }
         else if (Clipboard.Instance.ContainsImage)
         {
-            var etoBitmap = (Bitmap) Clipboard.Instance.Image;
+            var etoBitmap = (Bitmap)Clipboard.Instance.Image;
             Task.Run(() =>
             {
                 var image = EtoPlatform.Current.FromBitmap(etoBitmap);
@@ -514,6 +526,69 @@ public class DesktopController
         }
     }
 
+    public void Export()
+    {
+        if (string.IsNullOrEmpty(_folderConfig.Num))
+        {
+            _errorOutput.DisplayError(UiStrings.FolderNumError);
+            return;
+        }
+
+        var folder = _config.Get(x => x.ExportFolder);
+        if (string.IsNullOrEmpty(folder))
+        {
+            _errorOutput.DisplayError("Error config export folder");
+            return;
+        }
+
+        var exportsPath = Path.Combine(Paths.AppData, "Feathers_Exports", _folderConfig.Num);
+        if (!Directory.Exists(exportsPath))
+        {
+            Directory.CreateDirectory(exportsPath);
+        }
+
+        var latestFolder = "";
+        var index = 1;
+        foreach (var item in _imageList.Images)
+        {
+            var code = item.Typage?.Code;
+            if (string.IsNullOrEmpty(code))
+                return;
+
+            ProcessedImage processedImage = item.GetClonedImage();
+            if (code != "PSUITE")
+            {
+                index = 1;
+                var container = CreateUniqueDirectory(Path.Combine(exportsPath, code));
+                latestFolder = container;
+                var filePath = Path.Combine(container, $"p_{index++}.jpeg");
+                DoSaveImage(processedImage, filePath, ImageFileFormat.Jpeg, _config.Get(c => c.ImageSettings));
+            }
+            else
+            {
+                var filePath = Path.Combine(latestFolder, $"p_{index++}.jpeg");
+                DoSaveImage(processedImage, filePath, ImageFileFormat.Jpeg, _config.Get(c => c.ImageSettings));
+            }
+        }
+
+        string outputXmlFile = Path.Combine(exportsPath, "FolderStructure.xml"); ;
+        ExportFolderToXml(exportsPath, outputXmlFile);
+    }
+
+    public string CreateUniqueDirectory(string basePath)
+    {
+        int suffix = 1;
+        string newPath = $"{basePath}_{suffix++}";
+
+        while (Directory.Exists(newPath))
+        {
+            newPath = $"{basePath}_{suffix++}";
+        }
+
+        Directory.CreateDirectory(newPath);
+        return newPath;
+    }
+
     public void Suspend()
     {
         _suspended = true;
@@ -553,11 +628,11 @@ public class DesktopController
             {
                 controller._desktopFormProvider.DesktopForm.Close();
 #if NET6_0_OR_GREATER
-            if (OperatingSystem.IsMacOS())
-            {
-                // Closing the main window isn't enough to quit the app on Mac
-                Application.Instance.Quit();
-            }
+                if (OperatingSystem.IsMacOS())
+                {
+                    // Closing the main window isn't enough to quit the app on Mac
+                    Application.Instance.Quit();
+                }
 #endif
             });
             return Task.FromResult(new Empty());
@@ -575,5 +650,107 @@ public class DesktopController
                 await controller._desktopScanController.ScanWithDevice(request.Device));
             return Task.FromResult(new Empty());
         }
+    }
+
+    protected CancellationToken CancelToken => _cts.Token;
+
+    private void DoSaveImage(ProcessedImage image, string path, ImageFileFormat format, ImageSettings imageSettings)
+    {
+        FileSystemHelper.EnsureParentDirExists(path);
+        using var renderedImage = image.Render();
+        if (format == ImageFileFormat.Tiff)
+        {
+            _imageContext.TiffWriter.SaveTiff(new[] { renderedImage }, path,
+                imageSettings.TiffCompression.ToTiffCompressionType(), CancelToken);
+        }
+        else
+        {
+            // Quality will be ignored when not needed
+            // TODO: Scale quality differently for jpeg2000?
+            var quality = imageSettings.JpegQuality.Clamp(0, 100);
+            renderedImage.Save(path, format, new ImageSaveOptions { Quality = quality });
+        }
+    }
+
+    public void ExportFolderToXml(string sourceFolderPath, string outputXmlPath)
+    {
+        try
+        {
+            // Validate input paths
+            if (!Directory.Exists(sourceFolderPath))
+            {
+                throw new DirectoryNotFoundException($"Source folder not found: {sourceFolderPath}");
+            }
+
+            if (string.IsNullOrWhiteSpace(outputXmlPath))
+            {
+                throw new ArgumentException("Output XML path cannot be empty");
+            }
+
+            // Create XML document
+            var xmlDoc = CreateXmlFromFolder(sourceFolderPath);
+
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputXmlPath);
+            if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            // Save XML to file
+            xmlDoc.Save(outputXmlPath);
+            Console.WriteLine($"Successfully exported folder structure to: {outputXmlPath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exporting folder structure: {ex.Message}");
+            throw;
+        }
+    }
+
+    private XDocument CreateXmlFromFolder(string folderPath)
+    {
+        var directoryInfo = new DirectoryInfo(folderPath);
+
+        return new XDocument(
+            new XElement("FolderStructure",
+                new XElement("Root",
+                    new XAttribute("name", directoryInfo.Name),
+                    new XAttribute("path", directoryInfo.FullName),
+                    new XAttribute("created", directoryInfo.CreationTime),
+                    ProcessDirectoryContents(directoryInfo)
+                )
+            )
+        );
+    }
+
+    private XElement ProcessDirectoryContents(DirectoryInfo directory)
+    {
+        var contents = new XElement("Contents");
+
+        // Add files
+        foreach (var file in directory.GetFiles())
+        {
+            contents.Add(new XElement("File",
+                new XAttribute("name", file.Name),
+                new XAttribute("extension", file.Extension),
+                new XAttribute("size", file.Length),
+                new XAttribute("created", file.CreationTime),
+                new XAttribute("modified", file.LastWriteTime)
+            ));
+        }
+
+        // Add subdirectories recursively
+        foreach (var subDir in directory.GetDirectories())
+        {
+            contents.Add(new XElement("Folder",
+                new XAttribute("name", subDir.Name),
+                new XAttribute("path", subDir.FullName),
+                new XAttribute("created", subDir.CreationTime),
+                ProcessDirectoryContents(subDir)
+            ));
+        }
+
+        return contents;
     }
 }

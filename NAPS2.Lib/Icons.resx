@@ -676,4 +676,31 @@
   <data name="keyboard_small" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Icons\keyboard-small.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="add_folder" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\add-folder.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="scaner" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\scaner.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="folders" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\folders.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="folder_import" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\folder_import.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="typage_box" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\typage_box.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="update_folder" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\update_folder.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="feathers" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\feathers.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="logo" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\logo.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="export" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Icons\export.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
 </root>

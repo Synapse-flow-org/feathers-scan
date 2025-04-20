@@ -7,6 +7,7 @@ using NAPS2.EtoForms.Desktop;
 using NAPS2.EtoForms.Layout;
 using NAPS2.EtoForms.Notifications;
 using NAPS2.EtoForms.Widgets;
+using NAPS2.Folder;
 using NAPS2.ImportExport.Images;
 using NAPS2.Scan;
 
@@ -57,7 +58,8 @@ public abstract class DesktopForm : EtoFormBase
         IDesktopSubFormController desktopSubFormController,
         Lazy<DesktopCommands> commands,
         Sidebar sidebar,
-        IIconProvider iconProvider) : base(config)
+        IIconProvider iconProvider,
+        FolderConfig folderConfig) : base(config)
     {
         Icon = EtoPlatform.Current.IsGtk ? new Icon(1f, Icons.scanner_128.ToEtoImage()) : Icons.favicon.ToEtoIcon();
 
@@ -67,6 +69,7 @@ public abstract class DesktopForm : EtoFormBase
         _colorScheme = colorScheme;
         _profileManager = profileManager;
         ImageList = imageList;
+        FolderConfig = folderConfig;
         _thumbnailController = thumbnailController;
         _thumbnailProvider = thumbnailProvider;
         _desktopController = desktopController;
@@ -113,6 +116,7 @@ public abstract class DesktopForm : EtoFormBase
         ImageList.ImagesThumbnailInvalidated += ImageList_ImagesThumbnailInvalidated;
         _profileManager.ProfilesUpdated += ProfileManager_ProfilesUpdated;
         _notificationArea = new NotificationArea(_notificationManager, LayoutController);
+        FolderConfig.ConfigUpdated += FolderConfigUpdated;
     }
 
     protected override void BuildLayout()
@@ -156,6 +160,10 @@ public abstract class DesktopForm : EtoFormBase
             // TODO: Is this memory leaking (because of event handlers) when commands are converted to menuitems?
             _contextMenu.Items.AddRange(
             [
+                C.ButtonMenuItem(this, Commands.Typage),
+                new SeparatorMenuItem(),
+                C.ButtonMenuItem(this, Commands.Psuite),
+                new SeparatorMenuItem(),
                 C.ButtonMenuItem(this, Commands.ViewImage),
                 new SeparatorMenuItem(),
                 C.ButtonMenuItem(this, Commands.SelectAll),
@@ -195,6 +203,11 @@ public abstract class DesktopForm : EtoFormBase
         Invoker.Current.InvokeDispatch(UpdateToolbar);
     }
 
+    private void FolderConfigUpdated(object? sender, EventArgs e)
+    {
+        Invoker.Current.InvokeDispatch(UpdateToolbar);
+    }
+
     private void ImageList_ImagesThumbnailInvalidated(object? sender, ImageListEventArgs e)
     {
         Invoker.Current.InvokeDispatch(UpdateToolbar);
@@ -213,6 +226,7 @@ public abstract class DesktopForm : EtoFormBase
     }
 
     protected UiImageList ImageList { get; }
+    protected FolderConfig FolderConfig { get; }
     protected DesktopCommands Commands => _commands.Value;
 
     public void ReassignKeyboardShortcuts()
@@ -277,6 +291,9 @@ public abstract class DesktopForm : EtoFormBase
 
         var hiddenButtons = Config.Get(c => c.HiddenButtons);
 
+        // create Folder Btn
+        CreateToolbarButton(Commands.CreateFolder);
+
         if (!hiddenButtons.HasFlag(ToolbarButtons.Scan))
             CreateToolbarButtonWithMenu(Commands.Scan, DesktopToolbarMenuType.Scan, new MenuProvider()
                 .Dynamic(_scanMenuCommands)
@@ -284,19 +301,20 @@ public abstract class DesktopForm : EtoFormBase
                 .Append(Commands.NewProfile)
                 .Append(Commands.BatchScan)
                 .Append(Config.Get(c => c.DisableScannerSharing) ? null : Commands.ScannerSharing));
-        if (!hiddenButtons.HasFlag(ToolbarButtons.Profiles))
-            CreateToolbarButton(Commands.Profiles);
-        if (!hiddenButtons.HasFlag(ToolbarButtons.Ocr))
-            CreateToolbarButton(Commands.Ocr);
+
+        //if (!hiddenButtons.HasFlag(ToolbarButtons.Ocr))
+        //    CreateToolbarButton(Commands.Ocr);
         if (!hiddenButtons.HasFlag(ToolbarButtons.Import))
             CreateToolbarButton(Commands.Import);
         CreateToolbarSeparator();
+        CreateToolbarButton(Commands.Export);
         if (!hiddenButtons.HasFlag(ToolbarButtons.SavePdf))
             CreateToolbarButtonWithMenu(Commands.SavePdf, DesktopToolbarMenuType.SavePdf, new MenuProvider()
                 .Append(Commands.SaveAllPdf)
                 .Append(Commands.SaveSelectedPdf)
                 .Separator()
                 .Append(Commands.PdfSettings));
+
         if (!hiddenButtons.HasFlag(ToolbarButtons.SaveImages))
             CreateToolbarButtonWithMenu(Commands.SaveImages, DesktopToolbarMenuType.SaveImages, new MenuProvider()
                 .Append(Commands.SaveAllImages)
@@ -349,11 +367,14 @@ public abstract class DesktopForm : EtoFormBase
         if (!hiddenButtons.HasFlag(ToolbarButtons.Clear))
             CreateToolbarButton(Commands.ClearAll);
         CreateToolbarSeparator();
-        if (!hiddenButtons.HasFlag(ToolbarButtons.Language))
-            CreateToolbarMenu(Commands.LanguageMenu, GetLanguageMenuProvider());
+        //if (!hiddenButtons.HasFlag(ToolbarButtons.Language))
+        //    CreateToolbarMenu(Commands.LanguageMenu, GetLanguageMenuProvider());
+        if (!hiddenButtons.HasFlag(ToolbarButtons.Profiles))
+            CreateToolbarButton(Commands.Profiles);
         MaybeCreateToolbarStackedButtons(
             Commands.Settings, !hiddenButtons.HasFlag(ToolbarButtons.Settings),
             Commands.About, !hiddenButtons.HasFlag(ToolbarButtons.About));
+        CreateToolbarButton(Commands.Logo);
     }
 
     private void MaybeCreateToolbarStackedButtons(Command command1, bool show1, Command command2, bool show2)
@@ -403,8 +424,7 @@ public abstract class DesktopForm : EtoFormBase
 
     protected virtual void CreateToolbarButton(Command command) => throw new InvalidOperationException();
 
-    protected virtual void CreateToolbarButtonWithMenu(Command command, DesktopToolbarMenuType menuType,
-        MenuProvider menu) =>
+    protected virtual void CreateToolbarButtonWithMenu(Command command, DesktopToolbarMenuType menuType, MenuProvider menu) =>
         throw new InvalidOperationException();
 
     protected virtual void CreateToolbarMenu(Command command, MenuProvider menu) =>
@@ -423,7 +443,7 @@ public abstract class DesktopForm : EtoFormBase
             Text = menuCommand.MenuText
         };
         EtoPlatform.Current.AttachDpiDependency(this,
-            scale => menuItem.Image = ((ActionCommand) menuCommand).GetIconImage(scale));
+            scale => menuItem.Image = ((ActionCommand)menuCommand).GetIconImage(scale));
         menuProvider.Handle(subItems =>
         {
             menuItem.Items.Clear();
@@ -432,7 +452,7 @@ public abstract class DesktopForm : EtoFormBase
                 switch (subItem)
                 {
                     case MenuProvider.CommandItem { Command: var command }:
-                        menuItem.Items.Add(C.ButtonMenuItem(this, (ActionCommand) command));
+                        menuItem.Items.Add(C.ButtonMenuItem(this, (ActionCommand)command));
                         break;
                     case MenuProvider.SeparatorItem:
                         menuItem.Items.Add(new SeparatorMenuItem());
@@ -502,13 +522,22 @@ public abstract class DesktopForm : EtoFormBase
 
     protected virtual void UpdateToolbar()
     {
+        Commands.UpdateFolderTitle();
+        //bool isFolderSet = !string.IsNullOrEmpty(FolderConfig?.Num);
+        bool isFolderSet = true;
+
+        Commands.Scan.Enabled = isFolderSet;
+        Commands.Profiles.Enabled = isFolderSet;
+        Commands.Import.Enabled = isFolderSet;
+
+
         // Top-level toolbar items
         Commands.ImageMenu.Enabled =
             Commands.RotateMenu.Enabled = Commands.MoveUp.Enabled = Commands.MoveDown.Enabled =
                 Commands.Delete.Enabled = ImageList.Selection.Any();
         Commands.SavePdf.Enabled = Commands.SaveImages.Enabled = Commands.ClearAll.Enabled =
             Commands.ReorderMenu.Enabled =
-                Commands.EmailPdf.Enabled = Commands.Print.Enabled = ImageList.Images.Any();
+                Commands.EmailPdf.Enabled = Commands.Print.Enabled = isFolderSet && ImageList.Images.Any();
 
         // "All" dropdown items
         Commands.SaveAllPdf.Text = Commands.SaveAllImages.Text = Commands.EmailAll.Text =

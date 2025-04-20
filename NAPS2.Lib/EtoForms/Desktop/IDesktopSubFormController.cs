@@ -12,10 +12,14 @@ public interface IDesktopSubFormController
     void ShowCombineForm();
     void ShowRotateForm();
     void ShowProfilesForm();
+    void ShowCreateFolderForm();
+    void ShowBrandForm();
     void ShowOcrForm();
     void ShowBatchScanForm();
     void ShowScannerSharingForm();
     void ShowViewerForm();
+    void ShowTypageForm();
+    void SetAsPsuite();
     void ShowPdfSettingsForm();
     void ShowImageSettingsForm();
     void ShowEmailSettingsForm();

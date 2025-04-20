@@ -1,6 +1,8 @@
 using Eto.Drawing;
 using Eto.Forms;
 using Google.Protobuf;
+using NAPS2.Folder;
+using NAPS2.Images;
 using NAPS2.ImportExport.Images;
 
 namespace NAPS2.EtoForms.Widgets;
@@ -12,10 +14,12 @@ public class ImageListViewBehavior : ListViewBehavior<UiImage>
     private readonly ImageTransfer _imageTransfer = new();
 
     public ImageListViewBehavior(UiThumbnailProvider thumbnailProvider,
-        ColorScheme colorScheme, Naps2Config config) : base(colorScheme)
+        ColorScheme colorScheme, Naps2Config config, UiImageList imageList, FolderConfig folderConfig) : base(colorScheme)
     {
         _thumbnailProvider = thumbnailProvider;
         _config = config;
+        ImageList = imageList;
+        FolderConfig = folderConfig;
         MultiSelect = true;
         ShowLabels = false;
         ScrollOnDrag = true;

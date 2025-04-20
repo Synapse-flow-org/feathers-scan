@@ -105,6 +105,10 @@ internal class ScanOptionsValidator
     {
         get
         {
+            if (PlatformCompat.System.IsTwainDriverSupported)
+            {
+                return Driver.Twain;
+            }
             if (PlatformCompat.System.IsWiaDriverSupported)
             {
                 return Driver.Wia;
